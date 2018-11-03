@@ -34,10 +34,7 @@ import datetime
 import numpy as np
 import skimage.draw
 import cv2
-from mrcnn.visualize import display_instances
-import matplotlib.pyplot as plt
-import time
-import tensorflow as tf
+
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -47,6 +44,10 @@ sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
 
+from mrcnn.visualize import display_instances
+import matplotlib.pyplot as plt
+import time
+import tensorflow as tf
 # Path to trained weights file
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 
@@ -68,20 +69,39 @@ class CustomConfig(Config):
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 4
+    IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # Background + toy
 
     # Number of training steps per epoch
     # Batch size = GPU_COUNT * IMAGES_PER_GPU
-    # steps_per_epoch = # traininmages  / batchsize -> 333/4 ~ 83
-    STEPS_PER_EPOCH = 83
-
+    # steps_per_epoch = # traininmages  / batchsize -> 333/4 ~ 83 # 9/4
+    STEPS_PER_EPOCH = 166
+    
+    EPOCHS_NUM = 60
+    
     # Skip detections with < 80% confidence
     DETECTION_MIN_CONFIDENCE = 0.8
 
-
+    IMAGE_MIN_DIM = 512
+    IMAGE_MAX_DIM = 512
+    # Size of the fully-connected layers in the classification graph
+    FPN_CLASSIF_FC_LAYERS_SIZE = 1024
+    
+    # Number of ROIs per image to feed to classifier/mask heads
+    # The Mask RCNN paper uses 512 but often the RPN doesn't generate
+    # enough positive proposals to fill this and keep a positive:negative
+    # ratio of 1:3. You can increase the number of proposals by adjusting
+    # the RPN NMS threshold.
+    TRAIN_ROIS_PER_IMAGE = 200
+    
+    # Non-max suppression threshold to filter RPN proposals.
+    # You can increase this during training to generate more propsals.
+    RPN_NMS_THRESHOLD = 0.5
+    
+    
+    
 ############################################################
 #  Dataset
 ############################################################
@@ -202,14 +222,14 @@ def train(model):
     print("Training network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=10,
+                epochs=config.EPOCHS_NUM,
                 layers='heads')
     
-    currenttimestr = time.strftime('%Y%m%d_%H%M')
-    modelfilename = 'model_'+currenttimestr+'.hdf5'
-    print("Model name to save: {}".format(modelfilename))
-    ### SAVE
-    model.save(os.path.join(modelfilename))
+#     currenttimestr = time.strftime('%Y%m%d_%H%M')
+#     modelfilename = 'model_'+currenttimestr+'.hdf5'
+#     print("Model name to save: {}".format(modelfilename))
+#     ### SAVE
+#     model.save(os.path.join(modelfilename))
 
 
 def color_splash(image, mask):
